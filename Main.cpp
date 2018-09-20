@@ -120,8 +120,8 @@ public:
 		printf("---- Commpress Data ----\n");
 		CountDataFreq();
 		MakeHuffmanTree();
-
 		MakeSignedData();
+		MakeCompressedData();
 	}
 
 	// 表示関係
@@ -178,19 +178,44 @@ public:
 		PrintTreeData(_pNode->GetRight(), _depth);
 	}
 
+	//!	@brief	圧縮したデータを表示
+	void	PrintCompressedData() const
+	{
+		printf("---- Compressed Data ----\n");
+		printf("%s\n", m_compressedData.data());
+
+		printf("-- Bit --\n");
+		for (const auto& bitset : m_compressedBit)
+		{
+			printf("%s ", bitset.to_string().data());
+		}
+		printf("\n");
+
+
+		printf("-- Bit(char, int) --\n");
+		for (const auto& bitset : m_compressedBit)
+		{
+			printf("%2c (%3d) ", bitset.to_ulong(), bitset.to_ulong());
+		}
+		printf("\n");
+
+	}
+
 private:
 
-	static const char	LEFT_NODE_SIGN	= '1';	//!	@brief	符号化する際の左側ノードをたどる際に追加するの符号
-	static const char	RIGHT_NODE_SIGN = '0';	//!	@brief	符号化する際の右側ノードをたどる際に追加するの符号
+	static const char	LEFT_NODE_SIGN	= '1';					//!	@brief	符号化する際の左側ノードをたどる際に追加するの符号
+	static const char	RIGHT_NODE_SIGN = '0';					//!	@brief	符号化する際の右側ノードをたどる際に追加するの符号
 
-	std::string			m_originalData;		//!	@brief	元データ
-	int					m_dataCount;		//!	@brief	データ数
-	std::map<char, int>	m_dataFreq;			//!	@brief	データの出現頻度
+	std::string			m_originalData;							//!	@brief	元データ
+	std::string			m_compressedData;						//!	@brief	圧縮済みデータ(ビットの文字列)
+	int					m_dataCount;							//!	@brief	データ数
+	std::map<char, int>	m_dataFreq;								//!	@brief	データの出現頻度
 
-	std::vector<CNode>	m_nodes;			//!	@brief	全てのノードを配列で保持する
+	std::vector<CNode>	m_nodes;								//!	@brief	全てのノードを配列で保持する
 
-	std::map<char, std::string>	m_dataSign;	//!	@brief	データごとの符号
+	std::map<char, std::string>	m_dataSign;						//!	@brief	データごとの符号
 
+	std::vector<std::bitset<BIT_SET_DIGIT>>	m_compressedBit;	//!	@brief	ビット配列（余白は0埋め）
 
 	//----------------------------------------------------------
 	// ハフマンツリーの作成関係
@@ -416,8 +441,53 @@ private:
 		}
 	}
 
+	//----------------------------------------------------------
+	// 圧縮・解凍関係
+	//----------------------------------------------------------
+
+	//!	@brief	元データを圧縮
+	void	MakeCompressedData()
+	{
+		// 初期化
+		m_compressedData = "";
+
+		// 文字を符号化した文字列に置き換える
+		for (const auto& datum : m_originalData)
+		{
+			m_compressedData += m_dataSign[datum];
+		}
+
+		// データをビット列として入れていく
+		m_compressedBit.clear();
 
 
+		// ビット列に置きなおす
+		bool	isProcEnd = false;
+		size_t	idxData = 0;
+		while (!isProcEnd)
+		{
+			// 配列を追加
+			m_compressedBit.push_back(std::bitset<BIT_SET_DIGIT>());
+			auto& curBitset = m_compressedBit.back();
+
+			// 全てのビットに対して値をセットする
+			for (int iBit = BIT_SET_DIGIT - 1; iBit >= 0; --iBit)
+			{
+				bool value = m_compressedData[idxData] != '0';
+				curBitset.set(iBit, value);
+
+				// 次の文字列へ
+				idxData++; 
+
+				// 次の文字列がない場合
+				if (idxData >= m_compressedData.size())
+				{
+					isProcEnd = true;
+					break;
+				}
+			}
+		}
+	}
 
 public:
 
@@ -446,6 +516,7 @@ int main()
 	Huffman.PrintDataFreq();
 	Huffman.PrintSignedData();
 	Huffman.PrintTree();
+	Huffman.PrintCompressedData();
 
 	// 終了処理
 	printf("Push Enter Key >> ");
