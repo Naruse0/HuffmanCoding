@@ -96,6 +96,7 @@ public:
 		CountDataFreq();
 		MakeHuffmanTree();
 
+		printf("---- All Node Data ----\n");
 		for (auto& node : m_nodes)
 		{
 			printf("%d\n", node.GetValue());
@@ -122,11 +123,11 @@ public:
 
 private:
 
-	std::string			m_originalData;		// 元データ
-	int					m_dataCount;		// データ数
-	std::map<char, int>	m_dataFreq;			// データの出現頻度
+	std::string			m_originalData;		//!	@brief	元データ
+	int					m_dataCount;		//!	@brief	データ数
+	std::map<char, int>	m_dataFreq;			//!	@brief	データの出現頻度
 
-	std::vector<CNode>	m_nodes;			// 全てのノードを配列で保持する
+	std::vector<CNode>	m_nodes;			//!	@brief	全てのノードを配列で保持する
 
 
 
@@ -223,7 +224,10 @@ private:
 		// 探索成功時
 		if (pMinNode != nullptr && pMin2Node != nullptr)
 		{
-			printf("Add.[Min[%d], Min2[%d]]\n", pMinNode->GetValue(), pMin2Node->GetValue());
+			printf("Add.[Min[%d], Min2[%d], New[%d]]\n",
+				   pMinNode->GetValue(),
+				   pMin2Node->GetValue(), 
+				   pMinNode->GetValue() + pMin2Node->GetValue());
 
 			// 追加
 			AddNode(pMinNode->GetValue() + pMin2Node->GetValue(), pMinNode, pMin2Node);
@@ -253,35 +257,6 @@ private:
 
 		_pMinNode->SetParent(&m_nodes.back());
 		_pMin2Node->SetParent(&m_nodes.back());
-
-		//// 未設定のノードを探索
-		//for (auto& node : m_nodes)
-		//{
-		//	// 設定済みのノードは無視
-		//	if (!node.IsEnable()) { continue; }
-
-		//	// 空いているノードを見つけたら追加する
-		//	node.SetValue(_value);
-		//	node.SetLeft(_pMinNode);
-		//	node.SetRight(_pMin2Node);
-
-		//	// 子の親を設定する
-		//	_pMinNode->SetParent(&node);
-		//	_pMin2Node->SetParent(&node);
-
-		//	// 成功フラグを設定
-		//	isAddSuccess = true;
-		//	break;
-		//}
-
-		//if (isAddSuccess)
-		//{
-		//	printf("Add Successed.\n");
-		//}
-		//else
-		//{
-		//	printf("Add Failed.\n");
-		//}
 	}
 
 public:
