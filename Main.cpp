@@ -221,7 +221,7 @@ public:
 		printf("-- Bit --\n");
 		for (const auto& bitset : m_compressedBit)
 		{
-			printf("%s ", bitset.to_string().data());
+			printf("%s\n", bitset.to_string().data());
 		}
 		printf("\n");
 
@@ -505,7 +505,8 @@ private:
 			auto& curBitset = m_compressedBit.back();
 
 			// 全てのビットに対して値をセットする
-			for (int iBit = 0; iBit < BIT_SET_DIGIT; ++iBit)
+			//for (int iBit = 0; iBit < BIT_SET_DIGIT; ++iBit)
+			for(int iBit = BIT_SET_DIGIT - 1; iBit >= 0; --iBit)
 			{
 				bool value = m_compressedData[idxData] != '0';
 				curBitset.set(iBit, value);
@@ -559,7 +560,7 @@ private:
 			file << m_exportData .size() << std::endl;
  			for (const auto& bitset : m_exportData)
 			{
-				const char outChar = static_cast<const char>(bitset.to_ulong());
+				char outChar = static_cast<const char>(bitset.to_ulong());
 				file << outChar << std::endl;
 			}
 
@@ -639,9 +640,8 @@ private:
 				value = line.substr(keyOffset + 1);
 
 				char	inChar = key.front();		// 1文字取得
-				int		inVal = std::stoi(value);	// 値を取得
 
-				m_outDataSign[inChar] = inVal;
+				m_outDataSign[inChar] = value;
 			}
 
 			// 圧縮データ
@@ -656,17 +656,62 @@ private:
 				// 文字取得
 				file >> line;
 
+				printf("%s\n", line.data());
+
 				// 文字列をビットに置き換え 
 				char bitValue = line.front();
-				for (int iBit = 0; iBit < BIT_SET_DIGIT; ++iBit)
+				//for (int iBit = 0; iBit < BIT_SET_DIGIT; ++iBit)
+				for (int iBit = BIT_SET_DIGIT - 1; iBit >= 0; --iBit)
 				{
 					int targetBit = (1 << iBit);
 					bitset.set(iBit, bitValue & targetBit);
 				}
+			}
+
+			// ビット配列を文字列化する
+			std::string		bitString = "";
+			printf("---- Import Bit ----\n");
+			for (const auto& bitset : m_importData)
+			{
 				printf("%s\n", bitset.to_string().data());
+				bitString += bitset.to_string();
 			}
 
 			// 複合
+			m_outOrigData.clear();
+			int remainingDataCount = m_outDataCount;
+			while (remainingDataCount > 0)
+			{
+				char	expandData = '\0';
+				size_t	minStrLen = UINT_MAX;
+
+				// 全ての符号データのうち一致するものを探す
+				for (const auto& sign : m_outDataSign)
+				{
+					// 先頭からではない場合は無視
+					size_t offset = bitString.find(sign.second);
+					if (offset != 0) { continue; }
+
+					// 符号ビット数が多い場合は無視
+					size_t	strLen = sign.second.length();
+					if (strLen > minStrLen) { continue; }
+
+					// 最小を更新
+					minStrLen = strLen;
+
+					// 解凍後のデータを取得
+					expandData = sign.first;
+				}
+
+				// 処理が済んだデータを排除した文字列を取得
+				bitString = bitString.substr(minStrLen);
+
+				// 解凍後のデータを代入
+				m_outOrigData += expandData;
+
+				// 処理済みデータカウントを進める
+				remainingDataCount--;
+			}
 
 			//---- 終了 ----
 			file.close();
@@ -733,8 +778,10 @@ int main()
 
 	Huffman.ExportData(EXPORT_FILE_NAME);
 
-	CHuffman	ImportHuffman(INPUT_DATA_EXAMPLE);
+	CHuffman	ImportHuffman("");
 	ImportHuffman.ImportData(EXPORT_FILE_NAME);
+	Huffman.PrintOriginalData();
+	ImportHuffman.PrintOriginalData();
 
 	// 終了処理
 	printf("Push Enter Key >> ");
