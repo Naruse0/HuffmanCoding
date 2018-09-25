@@ -4,6 +4,8 @@
  */
 
 #include	<stdio.h>
+#include	<iostream>
+#include	<fstream>
 #include	<string>
 #include	<vector>
 #include	<map>
@@ -19,6 +21,7 @@ const char*			INPUT_DATA			= "CHFGHEGFCABFGDEGHAEFGHHGHBGFCEFACCFG";
 const char*			INPUT_DATA_EXAMPLE	= "aabcdeafagagfedadhaeedefahhh";
 const size_t		BIT_SET_DIGIT		= 8;
 
+const char*			EXPORT_FILE_NAME	= "Export.txt";
 
 /**
  *	@brief	ハフマン符号の木を作成する際のノードとなるクラス
@@ -114,6 +117,10 @@ class CHuffman
 {
 public:
 
+	//----------------------------------------------------------
+	// 主な機能
+	//----------------------------------------------------------
+
 	//!	@brief	データの圧縮を行う
 	void	CompressData()
 	{
@@ -124,7 +131,34 @@ public:
 		MakeCompressedData();
 	}
 
+	//!	@brief	圧縮したデータを出力する
+	void	ExportData(const char* _fileName)
+	{
+		printf("---- Export ----\n");
+
+		CExporter	exporter(_fileName, m_dataCount, m_dataSign, m_compressedBit);
+		exporter.Export();
+
+		// 終了
+		printf("Export success.\n");
+	}
+
+	//!	@brief	出力したデータを入力する
+	void	ImportData(const char* _fileName)
+	{
+		printf("---- Import ----\n");
+
+		CImporter	importer(_fileName, m_dataCount, m_originalData, m_dataSign);
+
+		importer.Import();
+
+		printf("Import success.\n");
+	}
+
+	//----------------------------------------------------------
 	// 表示関係
+	//----------------------------------------------------------
+
 	//!	@brief	元データの表示
 	void	PrintOriginalData() const
 	{
@@ -195,7 +229,7 @@ public:
 		printf("-- Bit(char, int) --\n");
 		for (const auto& bitset : m_compressedBit)
 		{
-			printf("%2c (%3d) ", bitset.to_ulong(), bitset.to_ulong());
+			printf("%3d ", bitset.to_ulong());
 		}
 		printf("\n");
 
@@ -471,7 +505,7 @@ private:
 			auto& curBitset = m_compressedBit.back();
 
 			// 全てのビットに対して値をセットする
-			for (int iBit = BIT_SET_DIGIT - 1; iBit >= 0; --iBit)
+			for (int iBit = 0; iBit < BIT_SET_DIGIT; ++iBit)
 			{
 				bool value = m_compressedData[idxData] != '0';
 				curBitset.set(iBit, value);
@@ -488,6 +522,185 @@ private:
 			}
 		}
 	}
+
+
+	//----------------------------------------------------------
+	// データ出力用クラス
+	//----------------------------------------------------------
+
+	class CExporter
+	{
+	public:
+
+		//!	@brief	データの出力
+		void Export() const
+		{
+			//---- 出力用ファイルオープン ----
+			std::ofstream	file(m_fileName, std::ios::out);
+			if (!file.is_open())
+			{
+				printf("Error : ファイルオープン失敗。\n");
+				return;
+			}
+
+			//---- 書き込み ----
+
+			// データ数
+			file << m_dataCount << std::endl;
+
+			// データごとの符号
+			file << m_dataSign.size() << std::endl;
+			for (const auto& datum : m_dataSign)
+			{
+				file << datum.first << "," << datum.second << std::endl;
+			}
+
+			// 圧縮データ
+			file << m_exportData .size() << std::endl;
+ 			for (const auto& bitset : m_exportData)
+			{
+				const char outChar = static_cast<const char>(bitset.to_ulong());
+				file << outChar << std::endl;
+			}
+
+			//---- 終了 ----
+			file.close();
+		}
+
+	private:
+
+		std::string										m_fileName;		//!	@brief	出力するファイル名
+		const int&										m_dataCount;	//!	@brief	出力するデータ数
+		const std::map<char, std::string>&				m_dataSign;		//!	@brief	データごとの符号
+		const std::vector<std::bitset<BIT_SET_DIGIT>>&	m_exportData;	//!	@brief	出力するデータ
+
+	public:
+
+		//!	@brief	出力するデータの参照を受け取るコンストラクタ
+		CExporter(
+			const char*										_fileName,
+			const int&										_dataCount,
+			const std::map<char, std::string>&				_dataSign,
+			const std::vector<std::bitset<BIT_SET_DIGIT>>&	_compressedData) : 
+			m_fileName(_fileName),
+			m_dataCount(_dataCount),
+			m_dataSign(_dataSign),
+			m_exportData(_compressedData)
+		{
+
+		}
+
+		~CExporter()
+		{
+		
+		}
+
+	};
+
+
+	//----------------------------------------------------------
+	// データ入力用クラス
+	//----------------------------------------------------------
+
+	class CImporter
+	{
+	public:
+
+		void	Import()
+		{
+			//---- 入力用ファイルオープン ----
+			std::ifstream	file(m_fileName, std::ios::in);
+			if (!file.is_open())
+			{
+				printf("Error : ファイルオープン失敗。\n");
+				return;
+			}
+
+			//---- 読み込み ----
+			std::string	line;		// 行の読み込み先
+
+			// データ数
+			file >> line;
+			m_outDataCount = std::stoi(line);
+
+			// データの符号
+			file >> line;
+			int signDataCount = std::stoi(line);
+
+			m_outDataSign.clear();
+			for (int i = 0; i < signDataCount; ++i)
+			{
+				file >> line;
+
+				// 行のデータを、キーと値に分割
+				std::string	key, value;
+				size_t		keyOffset = line.find_first_of(',');
+				key = line.substr(0, keyOffset);
+				value = line.substr(keyOffset + 1);
+
+				char	inChar = key.front();		// 1文字取得
+				int		inVal = std::stoi(value);	// 値を取得
+
+				m_outDataSign[inChar] = inVal;
+			}
+
+			// 圧縮データ
+			file >> line;
+			int bitsetCount = std::stoi(line);
+			m_importData.resize(bitsetCount);
+			for (int i = 0; i < bitsetCount; ++i)
+			{
+				// 参照を取得
+				auto& bitset = m_importData.at(i);
+
+				// 文字取得
+				file >> line;
+
+				// 文字列をビットに置き換え 
+				char bitValue = line.front();
+				for (int iBit = 0; iBit < BIT_SET_DIGIT; ++iBit)
+				{
+					int targetBit = (1 << iBit);
+					bitset.set(iBit, bitValue & targetBit);
+				}
+				printf("%s\n", bitset.to_string().data());
+			}
+
+			// 複合
+
+			//---- 終了 ----
+			file.close();
+		}
+
+	private:
+
+		std::string									m_fileName;
+		int&										m_outDataCount;
+		std::string&								m_outOrigData;
+		std::map<char, std::string>&				m_outDataSign;
+		std::vector<std::bitset<BIT_SET_DIGIT>>		m_importData;
+
+	public:
+
+		//!	@brief	入力したデータを格納する変数への参照を設定するコンストラクタ
+		CImporter(
+			const char*						_fileName,
+			int&							_outDataCount,
+			std::string&					_outOrigData,
+			std::map<char, std::string>&	_outDataSign) : 
+			m_fileName(_fileName),
+			m_outDataCount(_outDataCount),
+			m_outOrigData(_outOrigData),
+			m_outDataSign(_outDataSign)
+		{
+
+		}
+
+		~CImporter()
+		{
+
+		}
+	};
 
 public:
 
@@ -510,13 +723,18 @@ public:
  */
 int main()
 {
-	CHuffman	Huffman(INPUT_DATA_EXAMPLE);
+	CHuffman	Huffman(INPUT_DATA);
 	Huffman.PrintOriginalData();
 	Huffman.CompressData();
 	Huffman.PrintDataFreq();
 	Huffman.PrintSignedData();
 	Huffman.PrintTree();
 	Huffman.PrintCompressedData();
+
+	Huffman.ExportData(EXPORT_FILE_NAME);
+
+	CHuffman	ImportHuffman(INPUT_DATA_EXAMPLE);
+	ImportHuffman.ImportData(EXPORT_FILE_NAME);
 
 	// 終了処理
 	printf("Push Enter Key >> ");
