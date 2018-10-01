@@ -560,7 +560,8 @@ private:
 			file << m_exportData .size() << std::endl;
  			for (const auto& bitset : m_exportData)
 			{
-				char outChar = static_cast<const char>(bitset.to_ulong());
+				//char outChar = static_cast<const char>(bitset.to_ulong());
+				const int outChar = static_cast<const int>(bitset.to_ulong());
 				file << outChar << std::endl;
 			}
 
@@ -656,11 +657,16 @@ private:
 				// 文字取得
 				file >> line;
 
-				printf("%s\n", line.data());
-
 				// 文字列をビットに置き換え 
-				char bitValue = line.front();
-				//for (int iBit = 0; iBit < BIT_SET_DIGIT; ++iBit)
+				int		bitValue = 0;
+				int		curDigit = 1;
+				for (int iNum = line.size() - 1; iNum >= 0 ; --iNum)
+				{
+					int num = line.data()[iNum] - '0';
+					bitValue += num * curDigit;
+					curDigit *= 10;
+				}
+
 				for (int iBit = BIT_SET_DIGIT - 1; iBit >= 0; --iBit)
 				{
 					int targetBit = (1 << iBit);
@@ -768,20 +774,19 @@ public:
  */
 int main()
 {
-	CHuffman	Huffman(INPUT_DATA);
-	Huffman.PrintOriginalData();
-	Huffman.CompressData();
-	Huffman.PrintDataFreq();
-	Huffman.PrintSignedData();
-	Huffman.PrintTree();
-	Huffman.PrintCompressedData();
+	CHuffman	huf(INPUT_DATA);
+	huf.CompressData();
+	huf.PrintOriginalData();
+	huf.PrintDataFreq();
+	huf.PrintSignedData();
+	huf.PrintTree();
 
-	Huffman.ExportData(EXPORT_FILE_NAME);
+	CHuffman	inHuf("");
+	huf.ExportData(EXPORT_FILE_NAME);
+	inHuf.ImportData(EXPORT_FILE_NAME);
+	huf.PrintOriginalData();
+	inHuf.PrintOriginalData();
 
-	CHuffman	ImportHuffman("");
-	ImportHuffman.ImportData(EXPORT_FILE_NAME);
-	Huffman.PrintOriginalData();
-	ImportHuffman.PrintOriginalData();
 
 	// 終了処理
 	printf("Push Enter Key >> ");
