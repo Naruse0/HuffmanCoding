@@ -11,7 +11,10 @@ CHuffmanEncoder::CHuffmanEncoder(const char* _data) :
 
 void CHuffmanEncoder::Encode(const char* _exportFilePath)
 {
-	printf("Begin encoding.\n\n");
+	printf("---------------\n");
+	printf("Begin encoding.\n");
+	printf("---------------\n\n");
+
 	PrintOriginalData();
 
 	CountDataFreq();

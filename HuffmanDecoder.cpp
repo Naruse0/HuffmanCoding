@@ -15,7 +15,9 @@ CHuffmanDecoder::~CHuffmanDecoder()
 
 void CHuffmanDecoder::Decode(const char* _importFilePath)
 {
-	printf("Begin decoding.\n\n");
+	printf("---------------\n");
+	printf("Begin decoding.\n");
+	printf("---------------\n\n");
 
 	Import(_importFilePath);
 
